@@ -50,7 +50,7 @@ extern "C" {
 #define CACHE_DBUS_MMU_END              0x800
 
 #define CACHE_IROM_MMU_START            0
-#define CACHE_IROM_MMU_END              (0x80 * 4)
+#define CACHE_IROM_MMU_END              (0xff * 4)
 #define CACHE_IROM_MMU_SIZE             (CACHE_IROM_MMU_END - CACHE_IROM_MMU_START)
 
 #define CACHE_DROM_MMU_START            CACHE_IROM_MMU_END
