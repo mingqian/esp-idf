@@ -46,7 +46,7 @@ extern "C" {
 
 //TODO, remove these cache function dependencies
 #define CACHE_IROM_MMU_START            0
-#define CACHE_IROM_MMU_END              Cache_Get_IROM_MMU_End()
+#define CACHE_IROM_MMU_END              (0x1ff * 4)
 #define CACHE_IROM_MMU_SIZE             (CACHE_IROM_MMU_END - CACHE_IROM_MMU_START)
 
 #define CACHE_DROM_MMU_START            CACHE_IROM_MMU_END
