@@ -408,6 +408,13 @@ const esp_partition_t *esp_partition_verify(const esp_partition_t *partition)
     return NULL;
 }
 
+struct partition_cache {
+	const esp_partition_t *partition;
+	const void *map;
+	spi_flash_mmap_handle_t handle;
+};
+static struct partition_cache cache;
+
 esp_err_t esp_partition_read(const esp_partition_t* partition,
         size_t src_offset, void* dst, size_t size)
 {
@@ -421,6 +428,21 @@ esp_err_t esp_partition_read(const esp_partition_t* partition,
 
     if (!partition->encrypted) {
 #ifndef CONFIG_SPI_FLASH_USE_LEGACY_IMPL
+	if (cache.partition != partition) {
+		esp_err_t err;
+		cache.partition = partition;
+		err = esp_partition_mmap(partition, 0, partition->size,
+					 SPI_FLASH_MMAP_DATA,
+					 &cache.map, &cache.handle);
+		if (err != ESP_OK)
+			return err;
+	}
+	if (cache.partition == partition && cache.map) {
+		ESP_LOGD(TAG, "%s: returning mapped data offset = 0x%zx, size = %zd",
+			 __func__, src_offset, size);
+		memcpy(dst, cache.map + src_offset, size);
+		return ESP_OK;
+	}
         return esp_flash_read(partition->flash_chip, dst, partition->address + src_offset, size);
 #else
         return spi_flash_read(partition->address + src_offset, dst, size);
@@ -463,6 +485,11 @@ esp_err_t esp_partition_write(const esp_partition_t* partition,
     dst_offset = partition->address + dst_offset;
     if (!partition->encrypted) {
 #ifndef CONFIG_SPI_FLASH_USE_LEGACY_IMPL
+	if (cache.partition == partition) {
+		ESP_LOGD(TAG, "%s: ignoring offset = 0x%zx, size = %zd",
+			 __func__, dst_offset, size);
+		return ESP_OK;
+	}
         return esp_flash_write(partition->flash_chip, src, dst_offset, size);
 #else
         return spi_flash_write(dst_offset, src, size);
@@ -514,6 +541,11 @@ esp_err_t esp_partition_write_raw(const esp_partition_t* partition,
     dst_offset = partition->address + dst_offset;
 
 #ifndef CONFIG_SPI_FLASH_USE_LEGACY_IMPL
+    if (cache.partition == partition) {
+	    ESP_LOGD(TAG, "%s: ignoring offset = 0x%zx, size = %zd",
+		     __func__, dst_offset, size);
+	    return ESP_OK;
+    }
     return esp_flash_write(partition->flash_chip, src, dst_offset, size);
 #else
     return spi_flash_write(dst_offset, src, size);
@@ -537,6 +569,11 @@ esp_err_t esp_partition_erase_range(const esp_partition_t* partition,
         return ESP_ERR_INVALID_ARG;
     }
 #ifndef CONFIG_SPI_FLASH_USE_LEGACY_IMPL
+    if (cache.partition == partition) {
+	    ESP_LOGD(TAG, "%s: ignoring offset = 0x%zx, size = %zd",
+		     __func__, offset, size);
+	    return ESP_OK;
+    }
     return esp_flash_erase_region(partition->flash_chip, partition->address + offset, size);
 #else
     return spi_flash_erase_range(partition->address + offset, size);
