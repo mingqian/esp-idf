@@ -924,6 +924,8 @@ static void prvInitialiseNewTask( TaskFunction_t pxTaskCode,
     StackType_t * pxTopOfStack;
     UBaseType_t x;
 
+    if (xCoreID == tskNO_AFFINITY)
+	    xCoreID = 0;
     #if (configNUM_CORES < 2)
     xCoreID = 0;
     #endif
@@ -1186,6 +1188,8 @@ static void prvAddNewTaskToReadyList( TCB_t * pxNewTCB,
 {
     TCB_t *curTCB, *tcb0, *tcb1;
 
+    if (xCoreID == tskNO_AFFINITY)
+	    xCoreID = 0;
     #if (configNUM_CORES < 2)
     xCoreID = 0;
     #endif
