@@ -129,6 +129,8 @@ void IRAM_ATTR spi_flash_op_block_func(void *arg)
     xTaskResumeAll();
 }
 
+int g_spi_flash_skip_ipc;
+
 void IRAM_ATTR spi_flash_disable_interrupts_caches_and_other_cpu(void)
 {
     assert(esp_task_stack_is_sane_cache_disabled());
@@ -158,6 +160,7 @@ void IRAM_ATTR spi_flash_disable_interrupts_caches_and_other_cpu(void)
 
         // Signal to the spi_flash_op_block_task on the other CPU that we need it to
         // disable cache there and block other tasks from executing.
+	if (!g_spi_flash_skip_ipc) {
         s_flash_op_can_start = false;
         ESP_ERROR_CHECK(esp_ipc_call(other_cpuid, &spi_flash_op_block_func, (void *) other_cpuid));
 
@@ -165,6 +168,7 @@ void IRAM_ATTR spi_flash_disable_interrupts_caches_and_other_cpu(void)
             // Busy loop and wait for spi_flash_op_block_func to disable cache
             // on the other CPU
         }
+	}
         // Disable scheduler on the current CPU
         vTaskSuspendAll();
         // Can now set the priority back to the normal one
